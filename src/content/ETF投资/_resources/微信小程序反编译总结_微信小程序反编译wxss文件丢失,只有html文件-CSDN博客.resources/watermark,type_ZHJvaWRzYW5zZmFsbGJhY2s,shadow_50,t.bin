@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<Error>
-  <Code>InvalidArgument</Code>
-  <Message>The value: 16#pic_center of parameter: x is invalid.</Message>
-  <RequestId>659666F6C3CDD5313051FDA6</RequestId>
-  <HostId>img-blog.csdnimg.cn</HostId>
-  <EC>0040-00000262</EC>
-  <RecommendDoc>https://api.aliyun.com/troubleshoot?q=0040-00000262</RecommendDoc>
-</Error>
