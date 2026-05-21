@@ -1,0 +1,24 @@
+# dependencies and package manager caches
+node_modules/
+.pnpm-store/
+
+# build output
+dist/
+.astro/
+
+# VCS and editor files
+.git/
+.gitignore
+.vscode/
+.idea/
+.DS_Store
+
+# environment files
+.env
+.env.*
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

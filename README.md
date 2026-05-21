@@ -1,7 +1,7 @@
 # 个人静态博客系统
 
-**GitHub**：[lsy2246/newechoes](https://github.com/lsy2246/newechoes)
+**GitHub**：[Cooper-Cool/my-blog](https://github.com/Cooper-Cool/my-blog)
 
 **使用教程**：[点击查看](src/content/echoes博客使用说明.md)
 
-**在线演示**：[blog.lsy22.com](https://blog.lsy22.com/)
+**在线演示**：[blog.Cooper.com](https://blog.Cooper.com/)
