@@ -10,7 +10,9 @@ const rootDir = path.resolve(__dirname, '../..');
 // 构建目录在根目录下
 const buildDir = path.resolve(rootDir, 'dist');
 // 索引文件存储位置
-const indexDir = path.join(buildDir, 'client', 'index');
+const indexDir = path.join(buildDir, 'index');
+// 兼容旧目录结构
+const legacyIndexDir = path.join(buildDir, 'client', 'index');
 
 // 二进制可执行文件路径
 const binaryPath = path.join(rootDir, 'src', 'assets', 'article-index', process.platform === 'win32' 
@@ -32,27 +34,36 @@ export function articleIndexerIntegration() {
           // 检查请求路径是否是索引文件
           if (req.url.startsWith('/index/') && req.method === 'GET') {
             const requestedFile = req.url.slice(7); // 移除 '/index/'
-            const filePath = path.join(indexDir, requestedFile);
-            
-            console.log(`虚拟API请求: ${req.url} -> ${filePath}`);
-            
-            // 检查文件是否存在
-            if (fs.existsSync(filePath)) {
-              const stat = fs.statSync(filePath);
-              if (stat.isFile()) {
-                // 设置适当的Content-Type
-                let contentType = 'application/octet-stream';
-                if (filePath.endsWith('.json')) {
-                  contentType = 'application/json';
-                } else if (filePath.endsWith('.bin')) {
-                  contentType = 'application/octet-stream';
-                }
-                
-                res.setHeader('Content-Type', contentType);
-                res.setHeader('Content-Length', stat.size);
-                fs.createReadStream(filePath).pipe(res);
-                return;
+            const candidatePaths = [
+              path.join(indexDir, requestedFile),
+              path.join(legacyIndexDir, requestedFile),
+            ];
+
+            const existingPath = candidatePaths.find((candidatePath) => {
+              if (!fs.existsSync(candidatePath)) return false;
+              try {
+                return fs.statSync(candidatePath).isFile();
+              } catch {
+                return false;
               }
+            });
+
+            if (existingPath) {
+              console.log(`虚拟API请求: ${req.url} -> ${existingPath}`);
+              const stat = fs.statSync(existingPath);
+
+              // 设置适当的Content-Type
+              let contentType = 'application/octet-stream';
+              if (existingPath.endsWith('.json')) {
+                contentType = 'application/json';
+              } else if (existingPath.endsWith('.bin')) {
+                contentType = 'application/octet-stream';
+              }
+
+              res.setHeader('Content-Type', contentType);
+              res.setHeader('Content-Length', stat.size);
+              fs.createReadStream(existingPath).pipe(res);
+              return;
             }
             
             // 文件不存在，返回404
@@ -144,30 +155,110 @@ export async function generateArticleIndex(options = {}) {
       fs.chmodSync(binaryPath, 0o755);
     }
 
-    try {
-      // 执行索引命令，直接捕获输出
-      const result = execFileSync(binaryPath, [
-        '--source',                   // 源目录参数名
-        buildDirPath,                 // 源目录值
-        '--output',                   // 输出目录参数名
-        outputDirPath,                // 输出目录值
-        '--verbose',                  // 输出详细日志
-        // '--all'                       // 索引所有页面类型
-      ], { 
+    const indexerArgs = [
+      '--source',
+      buildDirPath,
+      '--output',
+      outputDirPath,
+      '--verbose',
+    ];
+
+    const runPrebuiltIndexer = () => execFileSync(binaryPath, indexerArgs, {
+      encoding: 'utf8',
+      windowsVerbatimArguments: process.platform === 'win32'
+    });
+
+const runCargoIndexer = () => execFileSync('cargo', [
+      'run',
+      '--manifest-path',
+      path.join(rootDir, 'wasm', 'article-indexer', 'Cargo.toml'),
+      '--bin',
+      'article-indexer-cli',
+      '--',
+      ...indexerArgs,
+    ], {
+      encoding: 'utf8',
+      cwd: rootDir,
+    });
+
+    const resolveCargoPath = () => {
+      const candidates = [
+        'cargo',
+        path.join(process.env.HOME || '', '.cargo', 'bin', 'cargo'),
+      ];
+      for (const candidate of candidates) {
+        if (!candidate) continue;
+        try {
+          execFileSync(candidate, ['--version'], { encoding: 'utf8' });
+          return candidate;
+        } catch {
+          // continue
+        }
+      }
+      return null;
+    };
+
+    const runCargoIndexerWithResolvedPath = () => {
+      const cargoPath = resolveCargoPath();
+      if (!cargoPath) {
+        const err = new Error('未找到 cargo 可执行文件');
+        // @ts-ignore keep compatible error shape
+        err.code = 'ENOENT';
+        throw err;
+      }
+      return execFileSync(cargoPath, [
+        'run',
+        '--manifest-path',
+        path.join(rootDir, 'wasm', 'article-indexer', 'Cargo.toml'),
+        '--bin',
+        'article-indexer-cli',
+        '--',
+        ...indexerArgs,
+      ], {
         encoding: 'utf8',
-        // 在Windows上禁用引号转义，防止参数解析问题
-        windowsVerbatimArguments: process.platform === 'win32'
+        cwd: rootDir,
       });
-      
+    };
+
+    try {
+      // 优先执行预编译二进制
+      const result = runPrebuiltIndexer();
       console.log(result);
       console.log('文章索引生成完成!');
       console.log(`索引文件保存在: ${outputDirPath}`);
-      
       return {
         success: true,
         indexPath: outputDirPath
       };
     } catch (execError) {
+      // 当预编译二进制不可执行时，自动回退到 cargo
+      const shouldFallbackToCargo = ['ENOEXEC', 'ENOENT', 'EACCES'].includes(execError?.code);
+
+      if (shouldFallbackToCargo) {
+        console.warn(
+          `预编译索引工具不可执行（${execError.code}），尝试使用 cargo 运行源码版索引器...`
+        );
+        try {
+          const cargoResult = runCargoIndexerWithResolvedPath();
+          console.log(cargoResult);
+          console.log('文章索引生成完成! (cargo fallback)');
+          console.log(`索引文件保存在: ${outputDirPath}`);
+          return {
+            success: true,
+            indexPath: outputDirPath,
+            fallback: 'cargo'
+          };
+        } catch (cargoError) {
+          console.error('cargo 回退执行失败:', cargoError.message);
+          if (cargoError.code === 'ENOENT') {
+            console.error(
+              '未检测到 cargo。请安装 Rust 工具链，或提供当前系统可执行的 article-indexer-cli。'
+            );
+          }
+          throw cargoError;
+        }
+      }
+
       console.error('执行索引工具时出错:', execError.message);
       if (execError.stdout) console.log('标准输出:', execError.stdout);
       if (execError.stderr) console.log('错误输出:', execError.stderr);
