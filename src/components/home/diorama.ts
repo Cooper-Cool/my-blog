@@ -707,7 +707,7 @@ export function initDiorama() {
 
   // Screen canvas texture (1024×640 logical — fast to regen, crisp enough with high aniso)
   const screenCanvas = document.createElement("canvas");
-  screenCanvas.width = 2048;
+  screenCanvas.width = 1920;
   screenCanvas.height = 1280;
   const screenCtx = screenCanvas.getContext("2d")!;
   const screenTexture = new THREE.CanvasTexture(screenCanvas);
@@ -1472,9 +1472,9 @@ export function initDiorama() {
       .addScaledVector(screenWorldRight, -0.04);
     roomCameraPos
       .copy(screenCenterWorld)
-      .addScaledVector(screenWorldNormal, 4.1)
-      .addScaledVector(screenWorldUp, 1.45)
-      .addScaledVector(screenWorldRight, 0.62);
+      .addScaledVector(screenWorldNormal, 2.7)
+      .addScaledVector(screenWorldUp, 0.85)
+      .addScaledVector(screenWorldRight, 0.82);
   };
   syncScreenIntroCamera();
   camera.position.copy(roomCameraPos);
