@@ -1434,7 +1434,7 @@ export function initDiorama() {
   const interactives: Interactive[] = [
     { object: notebook, label: "笔记本 · 文章", route: "/articles", basePos: notebook.position.clone() },
     { object: laptop, label: "电脑 · 项目", route: "/projects", basePos: laptop.position.clone() },
-    { object: person, label: "lsy · 关于", route: "/about", basePos: person.position.clone() },
+    { object: person, label: "Cooper · 关于", route: "/about", basePos: person.position.clone() },
     { object: bookStack, label: "书 · 读书", route: "/books", basePos: bookStack.position.clone() },
     { object: tv, label: "电视 · 观影", route: "/movies", basePos: tv.position.clone() },
   ];
@@ -1477,8 +1477,8 @@ export function initDiorama() {
       .addScaledVector(screenWorldRight, 0.62);
   };
   syncScreenIntroCamera();
-  camera.position.copy(screenCameraPos);
-  controls.target.copy(screenCameraTarget);
+  camera.position.copy(roomCameraPos);
+  controls.target.copy(roomCameraTarget);
 
   // ===== Theme =====
   const getTheme = (): ThemeName => (document.documentElement.dataset.theme === "dark" ? "dark" : "light");
@@ -1531,7 +1531,7 @@ export function initDiorama() {
     if (!shellEl) return 1;
     const rect = shellEl.getBoundingClientRect();
     const total = Math.max(1, rect.height - window.innerHeight);
-    return clamp(-rect.top / total);
+    return 1-clamp(-rect.top / total);
   };
   const syncScrollProgress = () => {
     scrollTargetProgress = getScrollProgress();
@@ -1581,9 +1581,11 @@ export function initDiorama() {
 
   // ===== Typewriter state (rotating status line at bottom of screen) =====
   type TyperPhase = "typing" | "hold" | "deleting" | "idle";
-  const TYPEWRITER_LINES: string[] = HOME_PROFILE.typewriter.length
-    ? HOME_PROFILE.typewriter
-    : ["now building ·"];
+  const TYPEWRITER_LINES: string[] = [
+    "pnpm run dev",
+    "cargo test",
+    "git status",
+  ];
   const TYPER_SPEED_TYPE = 55;    // ms per char while typing
   const TYPER_SPEED_DELETE = 26;  // ms per char while deleting
   const TYPER_HOLD_MS = 1800;     // pause after finishing typing
@@ -1632,135 +1634,76 @@ export function initDiorama() {
     const W = screenCanvas.width;
     const H = screenCanvas.height;
     const p = THEMES[theme];
-    const drawChip = (x: number, y: number, text: string, accent = false) => {
-      ctx.font = "500 16px 'JetBrains Mono', monospace";
-      const width = ctx.measureText(text).width + 28;
-      ctx.fillStyle = accent ? "rgba(228, 185, 90, 0.16)" : "rgba(255, 255, 255, 0.05)";
-      ctx.strokeStyle = accent ? "rgba(228, 185, 90, 0.35)" : "rgba(255, 255, 255, 0.09)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(x, y, width, 28, 14);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = accent ? p.screenAccent : p.screenMuted;
-      ctx.fillText(text, x + 14, y + 19);
-    };
-    const drawNote = (x: number, y: number, w: number, h: number, title: string, value: string, accent = false) => {
-      const fill = accent ? "rgba(255, 255, 255, 0.075)" : "rgba(255, 255, 255, 0.045)";
-      const stroke = accent ? "rgba(228, 185, 90, 0.28)" : "rgba(255, 255, 255, 0.08)";
-      ctx.fillStyle = fill;
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.roundRect(x, y, w, h, 22);
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = p.screenMuted;
-      ctx.font = "500 16px 'JetBrains Mono', monospace";
-      ctx.fillText(title, x + 22, y + 28);
-      ctx.fillStyle = accent ? p.screenAccent : p.screenText;
-      ctx.font = `600 ${accent ? 28 : 24}px 'JetBrains Mono', monospace`;
-      ctx.fillText(value, x + 22, y + 62);
-    };
 
     ctx.fillStyle = p.screenBg;
     ctx.fillRect(0, 0, W, H);
 
-    const wash = ctx.createRadialGradient(W * 0.24, H * 0.2, 30, W * 0.24, H * 0.2, W * 0.7);
-    wash.addColorStop(0, "rgba(228, 185, 90, 0.14)");
-    wash.addColorStop(0.5, "rgba(80, 136, 226, 0.06)");
+    const wash = ctx.createLinearGradient(0, 0, 0, H);
+    wash.addColorStop(0, "rgba(0, 0, 0, 0.32)");
     wash.addColorStop(1, "rgba(0, 0, 0, 0)");
     ctx.fillStyle = wash;
     ctx.fillRect(0, 0, W, H);
 
-    ctx.save();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.05)";
-    ctx.lineWidth = 1;
-    for (let x = 24; x < W; x += 56) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, H);
-      ctx.stroke();
-    }
-    for (let y = 20; y < H; y += 56) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(W, y);
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    ctx.moveTo(342, 194);
-    ctx.bezierCurveTo(480, 152, 680, 152, 856, 214);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(324, 396);
-    ctx.bezierCurveTo(482, 452, 662, 456, 858, 404);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(882, 252);
-    ctx.bezierCurveTo(1020, 226, 1170, 214, 1368, 254);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(680, 540);
-    ctx.bezierCurveTo(816, 518, 972, 536, 1138, 600);
-    ctx.stroke();
-
     ctx.fillStyle = p.screenMuted;
     ctx.font = "600 18px 'JetBrains Mono', monospace";
-    ctx.fillText("echoes / focus map", 118, 84);
+    ctx.textAlign = "center";
+    ctx.fillText("myblog ~ /home", W / 2, 76);
+    ctx.textAlign = "left";
 
     ctx.fillStyle = p.screenText;
-    ctx.font = "400 156px 'Fraunces', 'Noto Serif SC', serif";
-    ctx.fillText(HOME_PROFILE.title, 176, 252);
-    ctx.font = "500 27px 'JetBrains Mono', monospace";
+    ctx.font = "400 162px 'Fraunces', 'Noto Serif SC', serif";
+    ctx.fillText(HOME_PROFILE.title, 470, 312);
+    ctx.font = "600 44px 'JetBrains Mono', monospace";
     ctx.fillStyle = p.screenMuted;
-    ctx.fillText(HOME_PROFILE.subtitle, 188, 304);
-
-    drawChip(180, 348, "inside the page", true);
-    drawChip(386, 348, "scroll to pull back");
-    drawChip(638, 348, "notes / projects / reading");
-    drawChip(994, 348, "room appears later");
+    ctx.fillText(HOME_PROFILE.subtitle, 584, 396);
 
     const autoPosts = (window as unknown as { __HOME_POSTS_LABEL?: string }).__HOME_POSTS_LABEL;
     const nowStr = formatNowBeijing();
     const rows = Object.fromEntries(HOME_PROFILE.rows.map((row) => [row.label, row.value]));
 
-    drawNote(164, 444, 328, 112, "stack", rows.stack ?? "Rust · TypeScript");
-    drawNote(556, 430, 410, 142, "signal", "camera pulls back", true);
-    drawNote(1010, 178, 416, 106, "contact", rows.contact ?? "lsy22@vip.qq.com");
-    drawNote(1038, 404, 306, 108, "articles", autoPosts ?? "ongoing");
-    drawNote(1124, 590, 220, 92, "now", nowStr.slice(11), true);
+    const colX = 412;
+    const colTop = 470;
+    const rowGap = 72;
+    const splitX = colX + 196;
 
-    ctx.fillStyle = p.screenMuted;
-    ctx.font = "500 17px 'JetBrains Mono', monospace";
-    ctx.fillText("attention", 842, 214);
-    ctx.fillText("screen", 884, 404);
-    ctx.fillText("room", 1366, 246);
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(340, 420);
+    ctx.lineTo(1320, 420);
+    ctx.stroke();
 
-    const typerX = 184;
-    const typerY = 650;
-    ctx.fillStyle = p.screenMuted;
-    ctx.font = "500 16px 'JetBrains Mono', monospace";
-    ctx.fillText("current thread", typerX, typerY);
+    const drawRow = (i: number, label: string, value: string, accent = false) => {
+      const y = colTop + i * rowGap;
+      ctx.fillStyle = p.screenMuted;
+      ctx.font = "600 38px 'JetBrains Mono', monospace";
+      ctx.fillText(label, colX, y);
+      ctx.fillStyle = accent ? p.screenAccent : p.screenText;
+      ctx.font = `700 ${accent ? 46 : 44}px 'JetBrains Mono', monospace`;
+      ctx.fillText(value, splitX, y);
+    };
+
+    drawRow(0, "stack", rows.stack ?? "Rust · TypeScript");
+    drawRow(1, "contact", rows.contact ?? "lsy22@vip.qq.com");
+    drawRow(2, "posts", autoPosts ?? "ongoing");
+    drawRow(3, "now", nowStr.slice(0, 16), true);
+
+    const cmdY = colTop + rowGap * 4 + 8;
     ctx.fillStyle = p.screenAccent;
-    ctx.font = "600 24px 'JetBrains Mono', monospace";
-    ctx.fillText("> ", typerX, typerY + 36);
+    ctx.font = "700 50px 'JetBrains Mono', monospace";
+    ctx.fillText("> ", colX - 16, cmdY);
     ctx.fillStyle = p.screenText;
-    ctx.fillText(typerText, typerX + 30, typerY + 36);
+    ctx.fillText(typerText, colX + 30, cmdY);
     if (cursorOn) {
       const tw = ctx.measureText(typerText);
       ctx.fillStyle = p.screenAccent;
-      ctx.fillRect(typerX + 34 + tw.width, typerY + 15, 12, 24);
+      ctx.fillRect(colX + 30 + tw.width, cmdY - 38, 12, 40);
     }
 
     ctx.fillStyle = p.screenMuted;
-    ctx.font = "500 18px 'JetBrains Mono', monospace";
+    ctx.font = "600 30px 'JetBrains Mono', monospace";
     ctx.textAlign = "center";
-    ctx.fillText("scroll to pull the camera back · drag later · click objects", W / 2, H - 40);
+    ctx.fillText("drag to orbit · scroll for seasons · click objects", W / 2, H - 52);
     ctx.textAlign = "left";
 
     screenTexture.needsUpdate = true;
