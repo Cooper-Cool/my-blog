@@ -132,7 +132,8 @@ const articles = defineCollection({
   }),
   schema: z.object({
     title: z.string(),
-    date: z.date(),
+    // date: z.date(),
+    date: z.union([z.date(), z.string()]).transform(v => v instanceof Date ? v : new Date(v)),
     tags: z.array(z.string()).optional(),
     summary: z.string().optional(),
     draft: z.boolean().optional().default(false),
