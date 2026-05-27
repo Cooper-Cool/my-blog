@@ -35,3 +35,4 @@ pnpm-debug.log*
 .helloagents/plan
 .helloagents/archive
 .helloagents/CHANGELOG.md
+src/content/Obsidian
