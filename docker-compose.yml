@@ -10,6 +10,8 @@ services:
     volumes:
       - ./:/app
       - blog_node_modules:/app/node_modules
+      # 添加这一行：直接挂载知识库的真实路径
+      - /Users/cooper/Documents/知识库:/app/src/content/Obsidian
     environment:
       - NODE_ENV=development
       - CI=true
