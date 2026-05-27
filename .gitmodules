@@ -1,0 +1,3 @@
+[submodule "src/content/Obsidian"]
+	path = src/content/Obsidian
+	url = https://github.com/Cooper-Cool/my-obsidian-posts.git
