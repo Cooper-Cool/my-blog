@@ -28,3 +28,19 @@ docker compose exec blog-dev sh
 
 # 仅重启服务（不重建镜像）
 docker compose restart blog-dev
+
+
+# 1. 在 Obsidian 里正常写笔记（在 /Users/cooper/Documents/知识库）
+
+# 2. 写完推送到知识库
+cd /Users/cooper/Documents/知识库
+git add .
+git commit -m "更新笔记"
+git push origin main
+
+# 3. 更新博客中的子模块
+cd /Users/cooper/Documents/GitHub/my-blog
+git submodule update --remote src/content/Obsidian
+git add .
+git commit -m "更新知识库子模块"
+git push origin master
