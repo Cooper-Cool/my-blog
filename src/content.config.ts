@@ -127,15 +127,12 @@ async function getContentStructure(): Promise<ContentStructure> {
 // 4. 定义你的集合
 const articles = defineCollection({
   loader: glob({
-    pattern: [
-      "**/*.{md,mdx}",
-      "!**/.git/**",
-      "!**/.obsidian/**",
-      "!**/.trash/**",
-      "!**/node_modules/**",
-      "!**/.DS_Store",
-    ],
-    base: "./src/content"
+    pattern: "**/*.{md,mdx}",
+    base: "./src/content",
+    // Astro 5 默认会把路径 slug 化（小写 + 去除 `*`、`.` 等特殊字符），
+    // 但搜索索引、内链解析、getSpecialPath 都依赖原始文件路径作为 article.id，
+    // 所以这里覆盖默认实现，保持 id 与磁盘路径一致。
+    generateId: ({ entry }) => entry.replace(/\\/g, "/").replace(/\.(md|mdx)$/i, ""),
   }),
   schema: z.object({
     title: z.string(),

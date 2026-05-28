@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -o /tmp/page.html -w \"Status: %{http_code}\\\\n\" \"http://localhost:4321/articles/Obsidian/AI/AnyRouter\")",
+      "Read(//tmp/**)",
+      "Bash(curl -s -o /dev/null -w \"Status: %{http_code}\\\\n\" \"http://localhost:4321/Obsidian/AI/AnyRouter\")"
+    ]
+  }
+}
