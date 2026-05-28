@@ -7,47 +7,80 @@
 **在线演示**：[blog.Cooper.com](https://blog.Cooper.com/)
 
 
-## docker compose down -v 清理说明和常用命令速查。
+## Docker 常用命令
+
 ### 首次/更新镜像后启动
+
+```bash
 docker compose up --build
+```
 
 ### 后台启动
+
+```bash
 docker compose up -d --build
+```
 
 ### 看日志
+
+```bash
 docker compose logs -f
+```
 
 ### 停止并删除容器（保留卷）
+
+```bash
 docker compose down
+```
 
 ### 停止并删除容器 + 卷（会清掉容器里的 node_modules）
+
+```bash
 docker compose down -v
+```
 
 ### 进入容器
+
+```bash
 docker compose exec blog-dev sh
+```
 
 ### 仅重启服务（不重建镜像）
+
+```bash
 docker compose restart blog-dev
+```
 
 ### 查看镜像体积（重建前后对比，验证瘦身效果）
-docker images my-blog-dev
 
-## git blog和知识库更新命令
-### 1. 在 Obsidian 里正常写笔记（在 /Users/cooper/Documents/知识库）
+```bash
+docker images my-blog-dev
+```
+
+## 博客与知识库更新流程
+
+### 1. 在 Obsidian 里正常写笔记
+
+笔记位置：`/Users/cooper/Documents/知识库`
 
 ### 2. 写完推送到知识库
+
+```bash
 cd /Users/cooper/Documents/知识库
 git add .
 git commit -m "更新笔记"
 git push origin main
+```
 
 ### 3. 更新博客中的子模块
+
+```bash
 cd /Users/cooper/Documents/GitHub/my-blog
 git submodule update --remote src/content/Obsidian
 git add .
 git commit -m "更新知识库子模块"
 git push origin master
-
+```
 
 ## 检索 / 筛选实现（v0.2.0 起）
 
