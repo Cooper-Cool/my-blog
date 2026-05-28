@@ -40,6 +40,9 @@ export default defineConfig({
     worker: {
       format: "es",
     },
+    // server: {
+    //   allowedHosts: ['.trycloudflare.com', '.ngrok.io', '.ngrok-free.app'],
+    // },
   },
 
   integrations: [
