@@ -1115,7 +1115,7 @@ const ArticleFilter: React.FC<ArticleFilterProps> = ({ searchParams = {} }) => {
       try {
         setIsTagLoading(true);
         startFilterLoading("immediate");
-        await initFilterIndex("/index/filter_index.bin");
+        await initFilterIndex("/index/filter_index.json");
 
         if (!isMountedRef.current) return;
         setIsFilterReady(true);

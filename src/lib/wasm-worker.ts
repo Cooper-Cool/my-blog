@@ -1,3 +1,18 @@
+// 浏览器端检索/筛选 Worker。
+// 之前的实现加载 Rust 编译的 WASM 模块；现在直接调用纯 TS 运行时。
+// 对外消息协议保持与 wasmWorkerClient.ts / Search.tsx / ArticleFilter.tsx 完全一致。
+
+import {
+  loadIndex as loadSearchIndex,
+  search as runSearch,
+  suggest as runSuggest,
+} from "./search-runtime";
+import {
+  loadIndex as loadFilterIndex,
+  filter as runFilter,
+  getAllTags as runGetAllTags,
+} from "./filter-runtime";
+
 type SearchRequest = {
   query: string;
   search_type: string;
@@ -25,56 +40,10 @@ type WorkerResponse =
   | { id: number; type: "result"; payload: unknown }
   | { id: number; type: "error"; error: { message: string } };
 
-interface SearchWasmModule {
-  init_search_index?: (indexData: Uint8Array) => void;
-  search_cached?: (requestJson: string) => string;
-  search_articles?: (indexData: Uint8Array, requestJson: string) => string;
-  default?: () => Promise<void>;
-}
-
-interface ArticleFilterWasmModule {
-  ArticleFilterJS: {
-    init: (indexData: Uint8Array) => void;
-    get_all_tags: () => string[];
-    filter_articles: (paramsJson: string) => unknown;
-  };
-  default?: () => Promise<void>;
-}
-
-let searchModulePromise: Promise<SearchWasmModule> | null = null;
-let filterModulePromise: Promise<ArticleFilterWasmModule> | null = null;
-let filterReady = false;
 let searchReady = false;
-
-const loadSearchModule = async (): Promise<SearchWasmModule> => {
-  if (!searchModulePromise) {
-    searchModulePromise = (async () => {
-      const wasm = (await import(
-        "../assets/wasm/search/search_wasm.js"
-      )) as SearchWasmModule;
-      if (typeof wasm.default === "function") {
-        await wasm.default();
-      }
-      return wasm;
-    })();
-  }
-  return searchModulePromise;
-};
-
-const loadFilterModule = async (): Promise<ArticleFilterWasmModule> => {
-  if (!filterModulePromise) {
-    filterModulePromise = (async () => {
-      const wasm = (await import(
-        "../assets/wasm/article-filter/article_filter.js"
-      )) as ArticleFilterWasmModule;
-      if (typeof wasm.default === "function") {
-        await wasm.default();
-      }
-      return wasm;
-    })();
-  }
-  return filterModulePromise;
-};
+let filterReady = false;
+let searchInitPromise: Promise<void> | null = null;
+let filterInitPromise: Promise<void> | null = null;
 
 const respond = (id: number, payload: unknown) => {
   const message: WorkerResponse = { id, type: "result", payload };
@@ -94,38 +63,24 @@ const respondError = (id: number, error: unknown) => {
 
 const ensureSearchReady = async (indexUrl?: string) => {
   if (searchReady) return;
-  if (!indexUrl) {
-    throw new Error("搜索索引未初始化");
+  if (!indexUrl) throw new Error("搜索索引未初始化");
+  if (!searchInitPromise) {
+    searchInitPromise = loadSearchIndex(indexUrl).then(() => {
+      searchReady = true;
+    });
   }
-
-  const wasm = await loadSearchModule();
-  const response = await fetch(indexUrl, { cache: "no-cache" });
-  if (!response.ok) {
-    throw new Error(`获取搜索索引失败: ${response.statusText}`);
-  }
-  const indexData = new Uint8Array(await response.arrayBuffer());
-
-  if (typeof wasm.init_search_index !== "function") {
-    throw new Error("search_wasm 缺少 init_search_index 导出");
-  }
-  wasm.init_search_index(indexData);
-  searchReady = true;
+  await searchInitPromise;
 };
 
 const ensureFilterReady = async (indexUrl?: string) => {
   if (filterReady) return;
-  if (!indexUrl) {
-    throw new Error("筛选索引未初始化");
+  if (!indexUrl) throw new Error("筛选索引未初始化");
+  if (!filterInitPromise) {
+    filterInitPromise = loadFilterIndex(indexUrl).then(() => {
+      filterReady = true;
+    });
   }
-
-  const wasm = await loadFilterModule();
-  const response = await fetch(indexUrl, { cache: "no-cache" });
-  if (!response.ok) {
-    throw new Error(`获取筛选索引失败: ${response.statusText}`);
-  }
-  const indexData = new Uint8Array(await response.arrayBuffer());
-  wasm.ArticleFilterJS.init(indexData);
-  filterReady = true;
+  await filterInitPromise;
 };
 
 self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
@@ -145,38 +100,22 @@ self.onmessage = async (event: MessageEvent<WorkerRequest>) => {
       }
       case "search": {
         await ensureSearchReady();
-        const wasm = await loadSearchModule();
-        if (typeof wasm.search_cached !== "function") {
-          throw new Error("search_wasm 缺少 search_cached 导出");
-        }
-        const resultJson = wasm.search_cached(JSON.stringify(payload.request));
-        respond(id, JSON.parse(resultJson));
+        respond(id, runSearch(payload.request));
         return;
       }
       case "suggest": {
         await ensureSearchReady();
-        const wasm = await loadSearchModule();
-        if (typeof wasm.search_cached !== "function") {
-          throw new Error("search_wasm 缺少 search_cached 导出");
-        }
-        const resultJson = wasm.search_cached(JSON.stringify(payload.request));
-        respond(id, JSON.parse(resultJson));
+        respond(id, runSuggest(payload.request));
         return;
       }
       case "filter": {
         await ensureFilterReady();
-        const wasm = await loadFilterModule();
-        const result = wasm.ArticleFilterJS.filter_articles(
-          JSON.stringify(payload.request),
-        );
-        respond(id, result);
+        respond(id, runFilter(payload.request));
         return;
       }
       case "getTags": {
         await ensureFilterReady();
-        const wasm = await loadFilterModule();
-        const tags = wasm.ArticleFilterJS.get_all_tags() || [];
-        respond(id, tags);
+        respond(id, runGetAllTags());
         return;
       }
       default: {
